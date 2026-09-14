@@ -121,7 +121,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 Text(
-                    text = "Version 0.1 - Développé par Adrien ROHO",
+                    text = "Versión 0.1 - Desarollado por Adrien ROHO",
                     color = Color.Gray,
                     fontSize = 14.sp,
                     modifier = Modifier

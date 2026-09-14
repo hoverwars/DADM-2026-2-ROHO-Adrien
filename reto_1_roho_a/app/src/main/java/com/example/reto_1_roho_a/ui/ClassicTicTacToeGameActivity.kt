@@ -1,17 +1,53 @@
 package com.example.reto_1_roho_a.ui
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.reto_1_roho_a.data.Player
+import com.example.reto_1_roho_a.ui.components.TicTacToeBoard
+import com.example.reto_1_roho_a.ui.ui.theme.BlueXColor
+import com.example.reto_1_roho_a.ui.ui.theme.PrimaryColor
 import com.example.reto_1_roho_a.ui.ui.theme.RETO_1_ROHO_ATheme
+import com.example.reto_1_roho_a.ui.ui.theme.RedOColor
+import com.example.reto_1_roho_a.ui.ui.theme.TextColor
+import com.example.reto_1_roho_a.viewmodel.ClassicTicTacToeState
 
 class ClassicTicTacToeGameActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,6 +57,7 @@ class ClassicTicTacToeGameActivity : ComponentActivity() {
             RETO_1_ROHO_ATheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
+                        viewModel = viewModel(),
                         name = "Android",
                         modifier = Modifier.padding(innerPadding)
                     )
@@ -31,17 +68,141 @@ class ClassicTicTacToeGameActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun Greeting(viewModel: ClassicTicTacToeState, name: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val activity = (context as? Activity)
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val scores by viewModel.scores.collectAsStateWithLifecycle()
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    RETO_1_ROHO_ATheme {
-        Greeting("Android")
+    Scaffold(
+        topBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton (onClick = { activity?.finish() } ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cerrar y volver a la pagina principal",
+                        tint = Color.Black,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = BlueXColor,
+                        modifier = Modifier.size(36.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Column {
+                        Text("Jugador 1", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                        Text("(X)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BlueXColor)
+                    }
+                }
+
+                Text(
+                    text = "${scores[Player.Cross]!!} - ${scores[Player.Circle]!!}",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("Jugador 2", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                        Text("(O)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = RedOColor)
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = RedOColor,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        if (state.currentPlayer == Player.Cross) BlueXColor.copy(alpha = 0.75f)
+                            else RedOColor.copy(alpha = 0.75f),
+                        shape = RoundedCornerShape(16.dp))
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Turno del Jugador ${if (state.currentPlayer == Player.Cross) "1 (X)" else "2 (O)"}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextColor
+                )
+            }
+
+            TicTacToeBoard(
+                board = state.board,
+                onCellClick = viewModel::play,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+            )
+
+            if (viewModel.isOver()) {
+                Text(
+                    text = if (state.isDraw) "¡Empate!" else "¡Jugador ${if (state.winner == Player.Cross) "1" else "2"} ganó!",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextColor
+                )
+            }
+            else {
+                Spacer(Modifier.height(16.dp))
+            }
+            Button(
+                onClick = {
+                    if (viewModel.isOver()) {
+                        viewModel.restartGame()
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (viewModel.isOver()) PrimaryColor else PrimaryColor.copy(alpha = 0.25f),
+                    contentColor = if (viewModel.isOver()) TextColor else TextColor.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(50.dp),
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .height(56.dp)
+            ) {
+                Text(
+                    text = "NUEVA PARTIDA",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
     }
 }

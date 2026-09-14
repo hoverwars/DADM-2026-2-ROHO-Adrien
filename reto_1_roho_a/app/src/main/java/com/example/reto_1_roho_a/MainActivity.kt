@@ -1,5 +1,6 @@
 package com.example.reto_1_roho_a
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,17 +25,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.reto_1_roho_a.ui.ClassicTicTacToeGameActivity
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
+            val context = LocalContext.current;
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -86,7 +90,10 @@ class MainActivity : ComponentActivity() {
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Button(
-                            onClick = {},
+                            onClick = {
+                                val intent = Intent(context, ClassicTicTacToeGameActivity::class.java);
+                                context.startActivity(intent)
+                            },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.hsl(47F, 1.0F, 0.53F),
                                 contentColor = Color.hsl(0F, 0F, 0.35F)

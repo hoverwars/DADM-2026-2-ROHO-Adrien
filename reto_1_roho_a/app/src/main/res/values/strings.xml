@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">RETO_1_ROHO_A</string>
+    <string name="title_activity_classic_tic_tac_toe_game">ClassicTicTacToeGameActivity</string>
 </resources>

@@ -5,7 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,15 +22,15 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.reto_1_roho_a.ui.ClassicTicTacToeGameActivity
+import com.example.reto_1_roho_a.ui.ui.theme.PrimaryColor
+import com.example.reto_1_roho_a.ui.ui.theme.TextColor
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,7 +44,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 Text(
                     "Triqui",
-                    color = Color.hsl(47F, 1.0F, 0.53F),
+                    color = PrimaryColor,
                     fontSize = 50.sp,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
@@ -70,10 +69,15 @@ class MainActivity : ComponentActivity() {
                     )
                     {
                         Button(
-                            onClick = {},
+                            onClick = {
+                                val intent = Intent(context, ClassicTicTacToeGameActivity::class.java).apply {
+                                    putExtra("AGAINST_AI", true)
+                                };
+                                context.startActivity(intent)
+                            },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.hsl(47F, 1.0F, 0.80F),
-                                contentColor = Color.LightGray
+                                containerColor = PrimaryColor,
+                                contentColor = TextColor
                             ),
                             shape = RoundedCornerShape(50.dp),
                             elevation = ButtonDefaults.buttonElevation(
@@ -91,12 +95,14 @@ class MainActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.height(2.dp))
                         Button(
                             onClick = {
-                                val intent = Intent(context, ClassicTicTacToeGameActivity::class.java);
+                                val intent = Intent(context, ClassicTicTacToeGameActivity::class.java).apply {
+                                    putExtra("AGAINST_AI", false)
+                                };
                                 context.startActivity(intent)
                             },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.hsl(47F, 1.0F, 0.53F),
-                                contentColor = Color.hsl(0F, 0F, 0.35F)
+                                containerColor = PrimaryColor,
+                                contentColor = TextColor
                             ),
                             shape = RoundedCornerShape(50.dp),
                             elevation = ButtonDefaults.buttonElevation(

@@ -1,11 +1,16 @@
 package com.example.reto_1_roho_a.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.reto_1_roho_a.data.ClassicTicTacToeBoard
 import com.example.reto_1_roho_a.data.Player
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
 
 class ClassicTicTacToeState : ViewModel()
 {
@@ -14,11 +19,13 @@ class ClassicTicTacToeState : ViewModel()
         Player.Cross to 0,
         Player.Circle to 0
     ));
+    private var _lastStarter = Player.Cross;
+
     val uiState: StateFlow<ClassicTicTacToeBoard> = _uiState.asStateFlow();
     val scores: StateFlow<Map<Player, Int>> = _scores.asStateFlow();
 
 
-    fun play(index: Int): Boolean {
+    fun play(index: Int, againstAI: Boolean): Boolean {
         val cell = _uiState.value.board[index];
 
         // Game is over.
@@ -45,6 +52,13 @@ class ClassicTicTacToeState : ViewModel()
             isDraw = state == 1
         )
 
+        if (state == 0 && againstAI) {
+            viewModelScope.launch {
+                delay((Random.nextInt(500) + 500).milliseconds);
+                play(getComputerMove(newBoard), false);
+            }
+        }
+
         return true;
     }
 
@@ -52,8 +66,19 @@ class ClassicTicTacToeState : ViewModel()
         return _uiState.value.winner != null || _uiState.value.isDraw;
     }
 
-    fun restartGame() {
-        _uiState.value = ClassicTicTacToeBoard();
+    fun restartGame(againstAI: Boolean) {
+        _lastStarter = switchPlayer(_lastStarter)
+        val newGame = ClassicTicTacToeBoard(
+            currentPlayer = _lastStarter
+        );
+        _uiState.value = newGame;
+
+        if (_lastStarter == Player.Circle && againstAI) {
+            viewModelScope.launch {
+                delay((Random.nextInt(500) + 500).milliseconds);
+                play(getComputerMove(newGame.board), false);
+            }
+        }
     }
 
     /**
@@ -122,6 +147,41 @@ class ClassicTicTacToeState : ViewModel()
         return 1
     }
 
+    fun getComputerMove(board: List<Player?>): Int{
+        var move: Int
+
+        // First see if there's a move O can make to win
+        for (i in 0 until 9) {
+            if (board[i] != Player.Cross && board[i] != Player.Circle) {
+                val tempBoard = board.toMutableList().apply {
+                    this[i] = Player.Circle
+                }
+                if (checkForWinner(tempBoard) == 3) {
+                    return i;
+                }
+            }
+        }
+
+        // See if there's a move O can make to block X from winning
+        for (i in 0 until 9) {
+            if (board[i] != Player.Cross && board[i] != Player.Circle) {
+                val tempBoard = board.toMutableList().apply {
+                    this[i] = Player.Cross
+                }
+                if (checkForWinner(tempBoard) == 2) {
+                    return i;
+                }
+            }
+        }
+
+        // Generate random move
+        do {
+            move = Random.nextInt(9)
+        } while (board[move] == Player.Cross || board[move] == Player.Circle)
+
+        return move;
+    }
+    
     private fun switchPlayer(currentPlayer: Player): Player{
         return if (currentPlayer == Player.Cross) Player.Circle else Player.Cross;
     }

@@ -58,7 +58,7 @@ class ClassicTicTacToeGameActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
                         viewModel = viewModel(),
-                        name = "Android",
+                        againstAi = intent.getBooleanExtra("AGAINST_AI", false),
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -68,7 +68,7 @@ class ClassicTicTacToeGameActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(viewModel: ClassicTicTacToeState, name: String, modifier: Modifier = Modifier) {
+fun Greeting(viewModel: ClassicTicTacToeState, againstAi: Boolean, modifier: Modifier) {
     val context = LocalContext.current
     val activity = (context as? Activity)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -164,7 +164,10 @@ fun Greeting(viewModel: ClassicTicTacToeState, name: String, modifier: Modifier 
 
             TicTacToeBoard(
                 board = state.board,
-                onCellClick = viewModel::play,
+                onCellClick = { index ->
+                    if (!againstAi || state.currentPlayer == Player.Cross)
+                        viewModel.play(index, againstAi)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
@@ -184,7 +187,7 @@ fun Greeting(viewModel: ClassicTicTacToeState, name: String, modifier: Modifier 
             Button(
                 onClick = {
                     if (viewModel.isOver()) {
-                        viewModel.restartGame()
+                        viewModel.restartGame(againstAi)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(

@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Demo Oral</string>
+
+    <string name="title">Conversación por voz</string>
+    <string name="chat_placeholder">Mantén pulsado el micrófono y habla…</string>
+    <string name="chat_error">Lo siento, no he podido responder.</string>
+
+    <string name="loading_title">Preparando los modelos…</string>
+    <string name="loading_subtitle">Solo tarda unos segundos al abrir la app</string>
+    <string name="loading_speech_model">Reconocimiento de voz</string>
+    <string name="loading_llm">Modelo de lenguaje</string>
+    <string name="loading_error_speech_model">No se pudo cargar el modelo de voz.</string>
+    <string name="loading_error_llm">No se pudo cargar el modelo de lenguaje (¿falta ejecutar run.bat?).</string>
+    <string name="status_ready">Mantén pulsado el micrófono para hablar</string>
+    <string name="status_listening">Escuchando…</string>
+    <string name="status_release_to_send">Escuchando… suelta para enviar</string>
+    <string name="status_finishing">Terminando de transcribir…</string>
+    <string name="status_answering">Respondiendo…</string>
+    <string name="status_permission_denied">Se necesita el permiso del micrófono. Concédelo y vuelve a pulsar.</string>
+
+    <string name="button_talk">Mantén pulsado para hablar</string>
+    <string name="button_reset">Nueva conversación</string>
+</resources>

@@ -42,6 +42,11 @@ android {
         compose = true
     }
 
+    // android.util.Log & co. do nothing in JVM unit tests instead of throwing
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     // ONNX models are read straight from the APK, keep them uncompressed
     androidResources {
         noCompress += "onnx"
@@ -96,6 +101,11 @@ tasks.register<DownloadModelsTask>("downloadLlm") {
             "qwen2.5-1.5b-instruct.task" to
                 "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/" +
                 "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.task",
+            // Tool router. Community mirror of Google's FunctionGemma "Mobile Actions" fine-tune:
+            // the official litert-community/functiongemma-270m-ft-mobile-actions is gated.
+            "functiongemma-270m-mobile-actions.litertlm" to
+                "https://huggingface.co/JackJ1/functiongemma-270m-it-mobile-actions-litertlm/resolve/main/" +
+                "mobile-actions_q8_ekv1024.litertlm",
         )
     )
     outputDir.set(rootProject.layout.projectDirectory.dir("llm"))
@@ -115,6 +125,9 @@ dependencies {
 
     // MediaPipe LLM Inference (on-device LLM runtime)
     implementation("com.google.mediapipe:tasks-genai:0.10.35")
+
+    // LiteRT-LM (on-device LLM runtime with tool calling), runs the tool router
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.17.1")
 
     val composeBom = platform("androidx.compose:compose-bom:2026.06.00")
     implementation(composeBom)

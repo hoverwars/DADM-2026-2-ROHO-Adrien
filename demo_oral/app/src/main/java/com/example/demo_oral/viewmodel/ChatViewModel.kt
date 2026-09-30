@@ -1,24 +1,39 @@
 package com.example.demo_oral.viewmodel
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.demo_oral.R
 import com.example.demo_oral.llm.LocalLlm
+import com.example.demo_oral.llm.ToolRouter
 import com.example.demo_oral.llm.Turn
 import com.example.demo_oral.speech.BeepPlayer
 import com.example.demo_oral.speech.LiveTranscriber
 import com.example.demo_oral.speech.SpeechSynthesizer
+import com.example.demo_oral.tools.AgentOutcome
+import com.example.demo_oral.tools.PendingAction
+import com.example.demo_oral.tools.Risk
+import com.example.demo_oral.tools.ToolAction
+import com.example.demo_oral.tools.ToolAgent
+import com.example.demo_oral.tools.ToolCard
+import com.example.demo_oral.tools.ToolRegistry
+import com.example.demo_oral.tools.ToolStatus
+import com.example.demo_oral.tools.impl.defaultTools
+import com.example.demo_oral.tools.resolve.Confirmation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +41,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -34,7 +50,8 @@ enum class ModelState { LOADING, READY, ERROR }
 
 enum class Role { USER, ASSISTANT }
 
-data class ChatMessage(val id: Long, val role: Role, val text: String)
+/** [action] turns the message into a card: an action the assistant is doing, or asks to do. */
+data class ChatMessage(val id: Long, val role: Role, val text: String, val action: ToolAction? = null)
 
 data class ChatUiState(
     val speechModel: ModelState = ModelState.LOADING,
@@ -48,6 +65,8 @@ data class ChatUiState(
     val isSpeaking: Boolean = false,
     /** Setting: the answers are read aloud */
     val speechEnabled: Boolean = true,
+    /** Android permissions a tool is waiting for: the screen must ask for them */
+    val pendingPermissions: List<String> = emptyList(),
     val messages: List<ChatMessage> = emptyList(),
     /** Finished sentences of the message being spoken */
     val transcript: String = "",
@@ -60,6 +79,10 @@ data class ChatUiState(
     val assistantBusy: Boolean get() = isGenerating || isSpeaking
 
     /** The message being spoken is shown as a draft until the mic is released and it is sent. */
+    /** An action is waiting for the user's yes or no */
+    val awaitingConfirmation: Boolean
+        get() = messages.any { it.action?.status == ToolStatus.AWAITING_CONFIRMATION }
+
     val hasDraft: Boolean get() = isRecording || isFinishing || transcript.isNotEmpty() || partial.isNotEmpty()
 }
 
@@ -73,10 +96,25 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private var transcriber: LiveTranscriber? = null
     private var llm: LocalLlm? = null
+    private var router: ToolRouter? = null
     private val speaker = SpeechSynthesizer(application)
     private val beeps = BeepPlayer()
     private val speechLoadingJob: Job
     private val llmLoadingJob: Job
+    private val routerLoadingJob: Job
+    private val agent = ToolAgent(
+        registry = ToolRegistry(defaultTools(application)),
+        route = { utterance, candidates -> router?.route(utterance, candidates) },
+        hasPermission = { ContextCompat.checkSelfPermission(application, it) == PackageManager.PERMISSION_GRANTED },
+    )
+
+    /** An action shown in the message [messageId], waiting for the user. */
+    private class Pending(val messageId: Long, val action: PendingAction)
+
+    // Waiting for the user's "yes" (button or voice) / for Android permissions. Only one of each.
+    private var awaitingConfirmation: Pending? = null
+    private var awaitingPermission: Pending? = null
+    private var confirmationTimeout: Job? = null
     private var readerJob: Job? = null
     private var processingJob: Job? = null
     private var generationJob: Job? = null
@@ -109,6 +147,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(llmModel = ModelState.ERROR) }
             }
         }
+        // Optional: without the router model the assistant still chats, it just cannot act
+        routerLoadingJob = viewModelScope.launch(Dispatchers.Default) {
+            try {
+                router = ToolRouter(application)
+            } catch (e: Exception) {
+                Log.w(TAG, "Tools are disabled: could not load the router", e)
+            }
+        }
     }
 
     /** Setting: read the answers aloud or not. Turning it off also silences the current answer. */
@@ -121,7 +167,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     /** Forgets the whole conversation. */
     fun resetConversation() {
         stopAssistant()
-        _uiState.update { it.copy(messages = emptyList()) }
+        takeConfirmation()
+        awaitingPermission = null
+        _uiState.update { it.copy(messages = emptyList(), pendingPermissions = emptyList()) }
     }
 
     /** Cuts the answer being generated and the voice reading it (the text so far is kept). */
@@ -272,7 +320,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             else it.copy(
                 messages = it.messages + userMessage + answer,
                 isFinishing = false,
-                isGenerating = true,
                 transcript = "",
                 partial = "",
             )
@@ -280,41 +327,218 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         if (text.isEmpty()) return
 
         val history = _uiState.value.messages.dropLast(1).map { Turn(it.role == Role.USER, it.text) }
+        launchAnswer(answer) {
+            when (val decision = decide(text)) {
+                Decision.Chat -> chat(history, answer.id)
+                Decision.Handled -> Unit
+                is Decision.Action -> present(answer.id, decision.outcome)
+            }
+        }
+    }
+
+    /**
+     * Runs [work] once the previous answer is over. [answer] is the message it fills, if any: an
+     * empty one is dropped at the end. Whatever happens, the assistant is idle again afterwards.
+     */
+    private fun launchAnswer(answer: ChatMessage?, work: suspend () -> Unit) {
+        _uiState.update { it.copy(isGenerating = true) }
         val previous = generationJob
         generationJob = viewModelScope.launch(Dispatchers.Default) {
             previous?.join()
             try {
-                llmLoadingJob.join()
-                val llm = checkNotNull(llm) { "The LLM is not available" }
-                speaker.begin()
-                val reply = llm.reply(history) { partial ->
-                    // Called from the LLM thread: once interrupted, nothing more may be said
-                    if (!isActive) return@reply
-                    setAnswerText(answer.id, partial)
-                    if (_uiState.value.speechEnabled) speaker.feed(partial)
-                }
-                setAnswerText(answer.id, reply)
-                if (_uiState.value.speechEnabled) speaker.finish(reply)
+                work()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.e(TAG, "The LLM could not answer", e)
-                setAnswerText(answer.id, getApplication<Application>().getString(R.string.chat_error))
+                Log.e(TAG, "The assistant could not answer", e)
+                answer?.let { setMessage(it.id, string(R.string.chat_error), action = null) }
             } finally {
                 _uiState.update { state ->
                     state.copy(
                         isGenerating = false,
                         // An answer interrupted before saying anything is not worth keeping
-                        messages = state.messages.filterNot { it.id == answer.id && it.text.isEmpty() },
+                        messages = state.messages.filterNot { it.id == answer?.id && it.text.isEmpty() },
                     )
                 }
             }
         }
     }
 
+    private sealed interface Decision {
+        /** Plain conversation */
+        data object Chat : Decision
+
+        /** Dealt with by updating an existing card: nothing else to say */
+        data object Handled : Decision
+        data class Action(val outcome: AgentOutcome) : Decision
+    }
+
+    private suspend fun decide(text: String): Decision {
+        // A request that was never followed up is over as soon as the user says something else
+        cancelPermissionRequest()
+        if (_uiState.value.awaitingConfirmation) {
+            when (Confirmation.parse(text)) {
+                Confirmation.Answer.YES -> { confirm(true); return Decision.Handled }
+                Confirmation.Answer.NO -> { confirm(false); return Decision.Handled }
+                // Anything else: the user moved on, the action is dropped
+                Confirmation.Answer.UNKNOWN -> cancelConfirmation(string(R.string.tool_cancelled))
+            }
+        }
+        routerLoadingJob.join()
+        val outcome = agent.handle(text)
+        return if (outcome == AgentOutcome.NotATool) Decision.Chat else Decision.Action(outcome)
+    }
+
+    /** The confirmation buttons of a card. */
+    fun onConfirmationButton(yes: Boolean) {
+        if (!_uiState.value.awaitingConfirmation) return
+        launchAnswer(null) { confirm(yes) }
+    }
+
+    /** The user's answer to a card waiting for confirmation, from a button or from the voice. */
+    private suspend fun confirm(yes: Boolean) {
+        // Buttons and voice may answer at the same time: only the first one counts
+        val pending = takeConfirmation() ?: return
+        if (!yes) {
+            val text = string(R.string.tool_cancelled)
+            setStatus(pending.messageId, ToolStatus.CANCELLED, text)
+            speak(text)
+            return
+        }
+        setStatus(pending.messageId, ToolStatus.RUNNING)
+        present(pending.messageId, agent.execute(pending.action))
+    }
+
+    private fun takeConfirmation(): Pending? = synchronized(this) {
+        confirmationTimeout?.cancel()
+        confirmationTimeout = null
+        awaitingConfirmation.also { awaitingConfirmation = null }
+    }
+
+    private fun cancelConfirmation(text: String) {
+        val pending = takeConfirmation() ?: return
+        setStatus(pending.messageId, ToolStatus.CANCELLED, text)
+    }
+
+    private fun cancelPermissionRequest() {
+        val pending = awaitingPermission ?: return
+        awaitingPermission = null
+        _uiState.update { it.copy(pendingPermissions = emptyList()) }
+        setStatus(pending.messageId, ToolStatus.CANCELLED, string(R.string.tool_cancelled))
+    }
+
+    /** Shows what happened in the message [messageId] and remembers what the assistant waits for. */
+    private fun present(messageId: Long, outcome: AgentOutcome) {
+        when (outcome) {
+            is AgentOutcome.Done -> {
+                val status = if (outcome.success) ToolStatus.DONE else ToolStatus.FAILED
+                setMessage(messageId, outcome.text, ToolAction(outcome.card, status, outcome.risky))
+                speak(outcome.text)
+            }
+            is AgentOutcome.Error -> {
+                val text = string(R.string.tool_error)
+                setMessage(messageId, text, ToolAction(outcome.card, ToolStatus.FAILED, outcome.risky))
+                speak(text)
+            }
+            is AgentOutcome.Confirm -> {
+                val action = ToolAction(outcome.card, ToolStatus.AWAITING_CONFIRMATION, risky = true)
+                setMessage(messageId, outcome.question, action)
+                speak(outcome.question)
+                synchronized(this) {
+                    awaitingConfirmation = Pending(messageId, outcome.action)
+                    confirmationTimeout?.cancel()
+                    confirmationTimeout = viewModelScope.launch {
+                        delay(CONFIRMATION_TIMEOUT_MS)
+                        cancelConfirmation(string(R.string.tool_timeout))
+                    }
+                }
+            }
+            is AgentOutcome.NeedsPermission -> {
+                awaitingPermission = Pending(messageId, outcome.action)
+                val names = permissionNames(outcome.permissions).joinToString(", ")
+                val card = outcome.card.copy(
+                    fields = outcome.card.fields + (string(R.string.field_permissions) to names)
+                )
+                val risky = outcome.action.tool.spec.risk == Risk.CONFIRM
+                setMessage(messageId, string(R.string.tool_permission_needed), ToolAction(card, ToolStatus.AWAITING_PERMISSION, risky))
+            }
+            AgentOutcome.NotATool -> Unit
+        }
+    }
+
+    private fun permissionNames(permissions: List<String>): List<String> = permissions.map {
+        string(
+            when (it) {
+                Manifest.permission.READ_CONTACTS -> R.string.permission_contacts
+                Manifest.permission.SEND_SMS -> R.string.permission_sms
+                Manifest.permission.CALL_PHONE -> R.string.permission_phone
+                else -> R.string.permission_calendar
+            }
+        )
+    }.distinct()
+
+    /** The button of a card waiting for permissions: only now does Android show its dialog. */
+    fun requestPermissions() {
+        val pending = awaitingPermission ?: return
+        val missing = pending.action.tool.spec.permissions
+        _uiState.update { it.copy(pendingPermissions = missing) }
+    }
+
+    /** The screen asked for the permissions a tool was waiting for. */
+    fun onPermissionsResult(granted: Boolean) {
+        _uiState.update { it.copy(pendingPermissions = emptyList()) }
+        val pending = awaitingPermission ?: return
+        awaitingPermission = null
+        if (!granted) {
+            setStatus(pending.messageId, ToolStatus.DENIED, string(R.string.tool_permission_denied))
+            return
+        }
+        launchAnswer(null) { present(pending.messageId, agent.prepare(pending.action)) }
+    }
+
+    /** Streams the answer of the conversational LLM, reading it aloud as it comes. */
+    private suspend fun chat(history: List<Turn>, answerId: Long) {
+        llmLoadingJob.join()
+        val llm = checkNotNull(llm) { "The LLM is not available" }
+        speaker.begin()
+        val job = currentCoroutineContext().job
+        val reply = llm.reply(history) { partial ->
+            // Called from the LLM thread: once interrupted, nothing more may be said
+            if (!job.isActive) return@reply
+            setAnswerText(answerId, partial)
+            if (_uiState.value.speechEnabled) speaker.feed(partial)
+        }
+        setAnswerText(answerId, reply)
+        if (_uiState.value.speechEnabled) speaker.finish(reply)
+    }
+
+    private fun speak(text: String) {
+        speaker.begin()
+        if (_uiState.value.speechEnabled) speaker.finish(text)
+    }
+
+    private fun string(id: Int) = getApplication<Application>().getString(id)
+
     private fun setAnswerText(id: Long, text: String) {
         _uiState.update { state ->
             state.copy(messages = state.messages.map { if (it.id == id) it.copy(text = text) else it })
+        }
+    }
+
+    private fun setMessage(id: Long, text: String, action: ToolAction?) {
+        _uiState.update { state ->
+            state.copy(messages = state.messages.map { if (it.id == id) it.copy(text = text, action = action) else it })
+        }
+    }
+
+    /** Moves the card of a message to another state, keeping its text unless [text] is given. */
+    private fun setStatus(id: Long, status: ToolStatus, text: String? = null) {
+        _uiState.update { state ->
+            state.copy(messages = state.messages.map {
+                if (it.id == id && it.action != null) {
+                    it.copy(text = text ?: it.text, action = it.action.copy(status = status))
+                } else it
+            })
         }
     }
 
@@ -325,6 +549,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // Native resources must only be freed once nothing is using them anymore
         closeWhenIdle(speechLoadingJob, processingJob) { transcriber?.close() }
         closeWhenIdle(llmLoadingJob, generationJob) { llm?.close() }
+        closeWhenIdle(routerLoadingJob, generationJob) { router?.close() }
     }
 
     private fun closeWhenIdle(vararg jobs: Job?, close: () -> Unit) {
@@ -340,6 +565,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         private const val TAG = "ChatViewModel"
         private const val PREFS_NAME = "settings"
         private const val KEY_SPEECH_ENABLED = "speech_enabled"
+
+        // A confirmation nobody answers is cancelled after this long
+        private const val CONFIRMATION_TIMEOUT_MS = 60_000L
 
         // After release, the mic stays open at most this long waiting for the VAD to end the sentence
         private const val MAX_RELEASE_WAIT_SAMPLES = LiveTranscriber.SAMPLE_RATE * 3L

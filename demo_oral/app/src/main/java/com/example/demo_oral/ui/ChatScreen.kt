@@ -1,7 +1,10 @@
 package com.example.demo_oral.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
@@ -83,6 +86,16 @@ fun ChatScreen(
         ActivityResultContracts.RequestPermission()
     ) { granted -> permissionDenied = !granted }
 
+    // A tool (send an SMS, add a calendar event...) needs Android permissions: ask for them now
+    val toolPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results -> viewModel.onPermissionsResult(results.values.all { it }) }
+    LaunchedEffect(state.pendingPermissions) {
+        if (state.pendingPermissions.isNotEmpty()) {
+            toolPermissionLauncher.launch(state.pendingPermissions.toTypedArray())
+        }
+    }
+
     fun onMicPressed() {
         val granted = ContextCompat.checkSelfPermission(
             context, Manifest.permission.RECORD_AUDIO
@@ -120,6 +133,14 @@ fun ChatScreen(
 
         Conversation(
             state = state,
+            onConfirm = { viewModel.onConfirmationButton(true) },
+            onCancel = { viewModel.onConfirmationButton(false) },
+            onGrant = viewModel::requestPermissions,
+            onOpenSettings = {
+                context.startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+                )
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
@@ -161,7 +182,14 @@ private fun SettingsMenu(speechDisabled: Boolean, onSpeechDisabledChange: (Boole
 }
 
 @Composable
-private fun Conversation(state: ChatUiState, modifier: Modifier = Modifier) {
+private fun Conversation(
+    state: ChatUiState,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+    onGrant: () -> Unit,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     // Newest first, with a reversed layout: the list stays glued to the latest message
     val bubbles = buildList {
         addAll(state.messages)
@@ -197,6 +225,14 @@ private fun Conversation(state: ChatUiState, modifier: Modifier = Modifier) {
             when {
                 message.id == DRAFT_ID -> DraftBubble(state.transcript, state.partial, state.isRecording)
                 message.role == Role.USER -> Bubble(message.text, fromUser = true)
+                message.action != null -> ToolActionCard(
+                    action = message.action,
+                    text = message.text,
+                    onConfirm = onConfirm,
+                    onCancel = onCancel,
+                    onGrant = onGrant,
+                    onOpenSettings = onOpenSettings,
+                )
                 else -> Bubble(
                     text = message.text,
                     fromUser = false,
@@ -279,6 +315,7 @@ private fun StatusLine(state: ChatUiState, permissionDenied: Boolean) {
     if (!state.modelsReady) return
     val message = when {
         permissionDenied -> R.string.status_permission_denied
+        state.awaitingConfirmation -> R.string.status_confirm
         state.isRecording -> R.string.status_release_to_send
         state.isFinishing -> R.string.status_finishing
         state.isGenerating -> R.string.status_answering

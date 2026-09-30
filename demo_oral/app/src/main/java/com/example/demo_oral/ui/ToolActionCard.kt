@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.FlashlightOn
@@ -72,7 +73,8 @@ fun ToolActionCard(
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
-    val waiting = action.status == ToolStatus.AWAITING_CONFIRMATION || action.status == ToolStatus.AWAITING_PERMISSION
+    val waiting = action.status == ToolStatus.AWAITING_CONFIRMATION || action.status == ToolStatus.AWAITING_PERMISSION ||
+        action.status == ToolStatus.AWAITING_INFO
     val accent = when (action.status) {
         ToolStatus.DONE -> colors.primary
         ToolStatus.FAILED, ToolStatus.DENIED -> colors.error
@@ -198,6 +200,11 @@ private fun Footer(
             Spacer(Modifier.height(10.dp))
             Button(onClick = onGrant, modifier = buttonHeight) { Text(stringResource(R.string.button_grant)) }
         }
+        // The answer is spoken: only cancelling needs a button
+        ToolStatus.AWAITING_INFO -> Column {
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick = onCancel, modifier = buttonHeight) { Text(stringResource(R.string.button_cancel)) }
+        }
         // Android stops showing its dialog after a few refusals: the settings are the only way left
         ToolStatus.DENIED -> Column {
             Spacer(Modifier.height(10.dp))
@@ -210,6 +217,7 @@ private fun Footer(
 }
 
 private fun ToolStatus.label() = when (this) {
+    ToolStatus.AWAITING_INFO -> R.string.card_status_awaiting_info
     ToolStatus.AWAITING_PERMISSION -> R.string.card_status_awaiting_permission
     ToolStatus.AWAITING_CONFIRMATION -> R.string.card_status_awaiting_confirmation
     ToolStatus.RUNNING -> R.string.card_status_running
@@ -220,6 +228,7 @@ private fun ToolStatus.label() = when (this) {
 }
 
 private fun ToolStatus.vector(): ImageVector = when (this) {
+    ToolStatus.AWAITING_INFO -> Icons.Filled.EditNote
     ToolStatus.AWAITING_PERMISSION -> Icons.Filled.Lock
     ToolStatus.AWAITING_CONFIRMATION -> Icons.Filled.HelpOutline
     ToolStatus.RUNNING -> Icons.Filled.Timer

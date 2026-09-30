@@ -21,7 +21,10 @@ class SetAlarmTool(private val context: Context) : Tool {
         name = "set_alarm",
         description = "Sets an alarm that rings at a given time of the day.",
         params = listOf(
-            ToolParam("time", ParamType.STRING, "Time of the day, as said by the user, e.g. \"7:30\" or \"19h\""),
+            ToolParam(
+                "time", ParamType.STRING, "Time of the day, as said by the user, e.g. \"7:30\" or \"19h\"",
+                ask = context.getString(R.string.ask_alarm_time),
+            ),
             ToolParam("label", ParamType.STRING, "Optional name of the alarm", required = false),
         ),
         keywords = listOf("alarm", "despiert", "desperta", "wake", "reveil", "reveill"),
@@ -72,10 +75,16 @@ class SetTimerTool(private val context: Context) : Tool {
 
     private fun totalSeconds(args: ToolArgs) = (args.int("minutes") ?: 0) * 60 + (args.int("seconds") ?: 0)
 
+    private fun minutesText(minutes: Int) =
+        context.resources.getQuantityString(R.plurals.tool_duration_minutes, minutes, minutes)
+
+    private fun secondsText(seconds: Int) =
+        context.resources.getQuantityString(R.plurals.tool_duration_seconds, seconds, seconds)
+
     private fun durationText(total: Int) = when {
-        total % 60 == 0 -> context.getString(R.string.tool_duration_minutes, total / 60)
-        total < 60 -> context.getString(R.string.tool_duration_seconds, total)
-        else -> context.getString(R.string.tool_duration_both, total / 60, total % 60)
+        total % 60 == 0 -> minutesText(total / 60)
+        total < 60 -> secondsText(total)
+        else -> context.getString(R.string.tool_duration_both, minutesText(total / 60), secondsText(total % 60))
     }
 
     override fun card(args: ToolArgs) = ToolCard(

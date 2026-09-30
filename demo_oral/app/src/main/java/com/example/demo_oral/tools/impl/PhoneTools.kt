@@ -26,8 +26,11 @@ class SendSmsTool(private val context: Context) : Tool {
         name = "send_sms",
         description = "Sends a text message (SMS) to a contact.",
         params = listOf(
-            ToolParam("contact", ParamType.STRING, "Name of the contact, or a phone number"),
-            ToolParam("message", ParamType.STRING, "Text of the message"),
+            ToolParam(
+                "contact", ParamType.STRING, "Name of the contact, or a phone number",
+                ask = context.getString(R.string.ask_sms_contact),
+            ),
+            ToolParam("message", ParamType.STRING, "Text of the message", ask = context.getString(R.string.ask_sms_message)),
         ),
         risk = Risk.CONFIRM,
         keywords = listOf("sms", "mensaje", "message", "texto", "text", "manda", "envia", "enviale", "escribe", "dile", "envoie"),
@@ -73,7 +76,12 @@ class CallContactTool(private val context: Context) : Tool {
     override val spec = ToolSpec(
         name = "call_contact",
         description = "Makes a phone call to a contact.",
-        params = listOf(ToolParam("contact", ParamType.STRING, "Name of the contact, or a phone number")),
+        params = listOf(
+            ToolParam(
+                "contact", ParamType.STRING, "Name of the contact, or a phone number",
+                ask = context.getString(R.string.ask_call_contact),
+            ),
+        ),
         risk = Risk.CONFIRM,
         keywords = listOf("llama", "llamar", "call", "appelle", "telefon", "phone", "ring"),
         permissions = listOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_CONTACTS),

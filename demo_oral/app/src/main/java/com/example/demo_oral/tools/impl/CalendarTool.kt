@@ -18,6 +18,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.Locale
 
 /** Adds an event to the phone's calendar, without opening any app. */
 class CreateCalendarEventTool(private val context: Context) : Tool {
@@ -25,8 +26,11 @@ class CreateCalendarEventTool(private val context: Context) : Tool {
         name = "create_calendar_event",
         description = "Creates an event in the calendar.",
         params = listOf(
-            ToolParam("title", ParamType.STRING, "Title of the event"),
-            ToolParam("day", ParamType.STRING, "Day of the event, as said by the user, e.g. \"tomorrow\" or \"friday\""),
+            ToolParam("title", ParamType.STRING, "Title of the event", ask = context.getString(R.string.ask_event_title)),
+            ToolParam(
+                "day", ParamType.STRING, "Day of the event, as said by the user, e.g. \"tomorrow\" or \"friday\"",
+                ask = context.getString(R.string.ask_event_day),
+            ),
             ToolParam("time", ParamType.STRING, "Start time, as said by the user, e.g. \"15:30\"", required = false),
             ToolParam("duration_minutes", ParamType.INTEGER, "Length of the event in minutes", required = false),
         ),
@@ -99,7 +103,7 @@ class CreateCalendarEventTool(private val context: Context) : Tool {
 
     private companion object {
         const val DEFAULT_MINUTES = 60
-        val DAY_FORMAT: DateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+        val DAY_FORMAT: DateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.US)
         val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }

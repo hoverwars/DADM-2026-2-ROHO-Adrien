@@ -8,6 +8,8 @@ data class ToolParam(
     val type: ParamType,
     val description: String,
     val required: Boolean = true,
+    /** Asked aloud when the user did not give this required value. Not shown to the router. */
+    val ask: String? = null,
 )
 
 /** How much the user must be involved before a tool runs. */
@@ -35,7 +37,7 @@ data class ToolSpec(
 )
 
 /** Arguments of a call, as produced by the model (values may be strings, numbers...). */
-class ToolArgs(private val raw: Map<String, Any?>) {
+class ToolArgs(val raw: Map<String, Any?>) {
     fun string(name: String): String? = raw[name]?.toString()?.trim()?.takeIf { it.isNotEmpty() }
 
     fun int(name: String): Int? = when (val value = raw[name]) {
@@ -85,6 +87,7 @@ data class ToolCard(
 )
 
 enum class ToolStatus {
+    AWAITING_INFO,
     AWAITING_PERMISSION,
     AWAITING_CONFIRMATION,
     RUNNING,

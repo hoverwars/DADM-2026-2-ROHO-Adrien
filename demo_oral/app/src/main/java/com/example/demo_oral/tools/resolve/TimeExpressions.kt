@@ -28,8 +28,8 @@ object TimeExpressions {
             hour = t.split(' ').firstNotNullOfOrNull { NUMBER_WORDS[it] } ?: return null
         }
         if (minute == 0) {
-            if (Regex("\\by media\\b|\\bet demie\\b").containsMatchIn(t)) minute = 30
-            else if (Regex("\\by cuarto\\b|\\bet quart\\b").containsMatchIn(t)) minute = 15
+            if (Regex("\\by media\\b|\\bet demie\\b|\\bhalf past\\b").containsMatchIn(t)) minute = 30
+            else if (Regex("\\by cuarto\\b|\\bet quart\\b|\\bquarter past\\b").containsMatchIn(t)) minute = 15
         }
         if (pm && hour in 1..11) hour += 12
         if (am && hour == 12) hour = 0

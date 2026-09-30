@@ -83,7 +83,12 @@ class SetVolumeTool(private val context: Context) : Tool {
     override val spec = ToolSpec(
         name = "set_volume",
         description = "Sets the media volume of the phone.",
-        params = listOf(ToolParam("level", ParamType.INTEGER, "Volume in percent, from 0 to 100")),
+        params = listOf(
+            ToolParam(
+                "level", ParamType.INTEGER, "Volume in percent, from 0 to 100",
+                ask = context.getString(R.string.ask_volume_level),
+            ),
+        ),
         keywords = listOf("volum"),
     )
 

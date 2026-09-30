@@ -134,7 +134,7 @@ fun ChatScreen(
         Conversation(
             state = state,
             onConfirm = { viewModel.onConfirmationButton(true) },
-            onCancel = { viewModel.onConfirmationButton(false) },
+            onCancel = viewModel::onCancelButton,
             onGrant = viewModel::requestPermissions,
             onOpenSettings = {
                 context.startActivity(
@@ -316,6 +316,7 @@ private fun StatusLine(state: ChatUiState, permissionDenied: Boolean) {
     val message = when {
         permissionDenied -> R.string.status_permission_denied
         state.awaitingConfirmation -> R.string.status_confirm
+        state.awaitingInfo -> R.string.status_awaiting_info
         state.isRecording -> R.string.status_release_to_send
         state.isFinishing -> R.string.status_finishing
         state.isGenerating -> R.string.status_answering

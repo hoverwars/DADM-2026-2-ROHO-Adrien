@@ -7,6 +7,9 @@ class ToolRegistry(private val tools: List<Tool>) {
     sealed interface Validation {
         data class Valid(val action: PendingAction) : Validation
         data class Invalid(val reason: String) : Validation
+
+        /** Right tool, but the user has not given every required value yet. */
+        data class Missing(val action: PendingAction, val missing: List<ToolParam>) : Validation
     }
 
     /**
@@ -28,15 +31,18 @@ class ToolRegistry(private val tools: List<Tool>) {
     fun validate(name: String, arguments: Map<String, Any?>): Validation {
         val tool = tools.firstOrNull { it.spec.name == name } ?: return Validation.Invalid("unknown tool $name")
         val args = ToolArgs(arguments)
-        for (param in tool.spec.params) {
-            val present = when (param.type) {
-                ParamType.STRING -> args.string(param.name) != null
-                ParamType.INTEGER -> args.int(param.name) != null
+        val missing = tool.spec.params.filter { param ->
+            param.required && when (param.type) {
+                ParamType.STRING -> args.string(param.name) == null
+                ParamType.INTEGER -> args.int(param.name) == null
             }
-            if (param.required && !present) return Validation.Invalid("missing ${param.name}")
         }
-        return Validation.Valid(PendingAction(tool, args))
+        val action = PendingAction(tool, args)
+        return if (missing.isEmpty()) Validation.Valid(action) else Validation.Missing(action, missing)
     }
+
+    /** Whether [utterance] has keywords of another tool than [tool]: the user asks for something else. */
+    fun asksForAnother(utterance: String, tool: Tool): Boolean = candidates(utterance).any { it !== tool }
 
     companion object {
         const val MAX_CANDIDATES = 5

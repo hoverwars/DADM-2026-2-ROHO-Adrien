@@ -22,9 +22,9 @@ class SpeechSynthesizer(context: Context) : AutoCloseable {
     private var ready = false
     private val tts: TextToSpeech = TextToSpeech(context.applicationContext) { status ->
         if (status == TextToSpeech.SUCCESS) {
-            val result = tts.setLanguage(Locale("es", "ES"))
+            val result = tts.setLanguage(Locale.US)
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                Log.w(TAG, "Spanish voice unavailable ($result)")
+                Log.w(TAG, "English voice unavailable ($result)")
             }
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) = Unit

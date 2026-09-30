@@ -2,6 +2,7 @@ package com.example.demo_oral.viewmodel
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
@@ -43,6 +44,10 @@ data class ChatUiState(
     val isFinishing: Boolean = false,
     /** The assistant is working on / saying an answer */
     val isGenerating: Boolean = false,
+    /** The voice reading the answer aloud is still going */
+    val isSpeaking: Boolean = false,
+    /** Setting: the answers are read aloud */
+    val speechEnabled: Boolean = true,
     val messages: List<ChatMessage> = emptyList(),
     /** Finished sentences of the message being spoken */
     val transcript: String = "",
@@ -51,13 +56,19 @@ data class ChatUiState(
 ) {
     val modelsReady: Boolean get() = speechModel == ModelState.READY && llmModel == ModelState.READY
 
+    /** The mic is locked while the assistant is writing or saying its answer. */
+    val assistantBusy: Boolean get() = isGenerating || isSpeaking
+
     /** The message being spoken is shown as a draft until the mic is released and it is sent. */
     val hasDraft: Boolean get() = isRecording || isFinishing || transcript.isNotEmpty() || partial.isNotEmpty()
 }
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(ChatUiState())
+    private val prefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val _uiState = MutableStateFlow(
+        ChatUiState(speechEnabled = prefs.getBoolean(KEY_SPEECH_ENABLED, true))
+    )
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private var transcriber: LiveTranscriber? = null
@@ -73,6 +84,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private var nextMessageId = 0L
 
     init {
+        viewModelScope.launch {
+            speaker.isSpeaking.collect { speaking -> _uiState.update { it.copy(isSpeaking = speaking) } }
+        }
         speechLoadingJob = viewModelScope.launch(Dispatchers.Default) {
             try {
                 val start = System.currentTimeMillis()
@@ -95,6 +109,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(llmModel = ModelState.ERROR) }
             }
         }
+    }
+
+    /** Setting: read the answers aloud or not. Turning it off also silences the current answer. */
+    fun setSpeechEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(speechEnabled = enabled) }
+        prefs.edit().putBoolean(KEY_SPEECH_ENABLED, enabled).apply()
+        if (!enabled) speaker.stop()
     }
 
     /** Forgets the whole conversation. */
@@ -234,13 +255,27 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Turns what was just said into a message and asks the LLM for an answer. */
-    private fun sendDraft() {
-        val text = _uiState.value.transcript.trim()
+    private fun sendDraft() = submit(_uiState.value.transcript.trim())
+
+    /** DEBUG: sends a typed message as if it had been spoken (with DebugTextInput.kt, remove together). */
+    fun debugSendText(text: String) {
+        val state = _uiState.value
+        if (!state.modelsReady || state.assistantBusy || state.isRecording || state.isFinishing) return
+        submit(text.trim())
+    }
+
+    private fun submit(text: String) {
         val userMessage = ChatMessage(nextMessageId++, Role.USER, text)
         val answer = ChatMessage(nextMessageId++, Role.ASSISTANT, "")
         _uiState.update {
             if (text.isEmpty()) it.copy(isFinishing = false, transcript = "", partial = "")
-            else it.copy(messages = it.messages + userMessage + answer, isFinishing = false, transcript = "", partial = "")
+            else it.copy(
+                messages = it.messages + userMessage + answer,
+                isFinishing = false,
+                isGenerating = true,
+                transcript = "",
+                partial = "",
+            )
         }
         if (text.isEmpty()) return
 
@@ -248,7 +283,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val previous = generationJob
         generationJob = viewModelScope.launch(Dispatchers.Default) {
             previous?.join()
-            _uiState.update { it.copy(isGenerating = true) }
             try {
                 llmLoadingJob.join()
                 val llm = checkNotNull(llm) { "The LLM is not available" }
@@ -257,10 +291,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     // Called from the LLM thread: once interrupted, nothing more may be said
                     if (!isActive) return@reply
                     setAnswerText(answer.id, partial)
-                    speaker.feed(partial)
+                    if (_uiState.value.speechEnabled) speaker.feed(partial)
                 }
                 setAnswerText(answer.id, reply)
-                speaker.finish(reply)
+                if (_uiState.value.speechEnabled) speaker.finish(reply)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -304,6 +338,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val TAG = "ChatViewModel"
+        private const val PREFS_NAME = "settings"
+        private const val KEY_SPEECH_ENABLED = "speech_enabled"
 
         // After release, the mic stays open at most this long waiting for the VAD to end the sentence
         private const val MAX_RELEASE_WAIT_SAMPLES = LiveTranscriber.SAMPLE_RATE * 3L

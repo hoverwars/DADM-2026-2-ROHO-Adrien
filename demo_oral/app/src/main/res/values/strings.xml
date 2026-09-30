@@ -20,4 +20,8 @@
 
     <string name="button_talk">Mantén pulsado para hablar</string>
     <string name="button_reset">Nueva conversación</string>
+    <string name="button_settings">Ajustes</string>
+    <string name="setting_disable_tts">Desactivar la voz de las respuestas</string>
+    <string name="debug_text_hint">Debug: escribe un mensaje</string>
+    <string name="debug_text_send">Enviar</string>
 </resources>

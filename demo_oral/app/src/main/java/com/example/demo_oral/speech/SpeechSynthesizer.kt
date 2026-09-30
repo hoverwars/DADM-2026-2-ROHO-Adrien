@@ -2,7 +2,12 @@ package com.example.demo_oral.speech
 
 import android.content.Context
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicLong
 import java.util.Locale
 
 /**
@@ -21,11 +26,27 @@ class SpeechSynthesizer(context: Context) : AutoCloseable {
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.w(TAG, "Spanish voice unavailable ($result)")
             }
+            tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) = Unit
+                override fun onDone(utteranceId: String?) = utteranceEnded(utteranceId)
+                override fun onStop(utteranceId: String?, interrupted: Boolean) = utteranceEnded(utteranceId)
+
+                @Deprecated("Deprecated in Java")
+                override fun onError(utteranceId: String?) = utteranceEnded(utteranceId)
+            })
             ready = true
         } else {
             Log.e(TAG, "TextToSpeech init failed ($status)")
         }
     }
+
+    private val pending = mutableSetOf<String>()
+    private val nextUtteranceId = AtomicLong()
+
+    private val _isSpeaking = MutableStateFlow(false)
+
+    /** True while some of the answer is queued or being said. */
+    val isSpeaking: StateFlow<Boolean> = _isSpeaking.asStateFlow()
 
     // How much of the current answer was already handed to the TTS engine
     private var spokenLength = 0
@@ -57,12 +78,28 @@ class SpeechSynthesizer(context: Context) : AutoCloseable {
     /** Cuts the voice immediately. */
     fun stop() {
         tts.stop()
+        synchronized(pending) {
+            pending.clear()
+            _isSpeaking.value = false
+        }
+    }
+
+    private fun utteranceEnded(id: String?) {
+        synchronized(pending) {
+            pending.remove(id)
+            _isSpeaking.value = pending.isNotEmpty()
+        }
     }
 
     private fun speak(text: String) {
         val speakable = text.replace(NOT_SPEAKABLE, "").trim()
         if (speakable.isEmpty() || !ready) return
-        tts.speak(speakable, TextToSpeech.QUEUE_ADD, null, null)
+        val id = "u${nextUtteranceId.incrementAndGet()}"
+        synchronized(pending) {
+            pending.add(id)
+            _isSpeaking.value = true
+        }
+        if (tts.speak(speakable, TextToSpeech.QUEUE_ADD, null, id) != TextToSpeech.SUCCESS) utteranceEnded(id)
     }
 
     override fun close() {

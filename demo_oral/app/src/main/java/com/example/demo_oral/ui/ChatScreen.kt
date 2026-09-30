@@ -32,6 +32,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -102,6 +106,10 @@ fun ChatScreen(
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f),
             )
+            SettingsMenu(
+                speechDisabled = !state.speechEnabled,
+                onSpeechDisabledChange = { viewModel.setSpeechEnabled(!it) },
+            )
             IconButton(
                 onClick = viewModel::resetConversation,
                 enabled = state.messages.isNotEmpty() && !state.isRecording,
@@ -119,13 +127,36 @@ fun ChatScreen(
 
         StatusLine(state = state, permissionDenied = permissionDenied)
 
+        // DEBUG: typed input, remove this call and DebugTextInput.kt
+        DebugTextInput(
+            enabled = state.modelsReady && !state.assistantBusy && !state.isRecording && !state.isFinishing,
+            onSend = viewModel::debugSendText,
+        )
+
         MicButton(
             isRecording = state.isRecording,
-            enabled = state.modelsReady,
+            enabled = state.modelsReady && !state.assistantBusy,
             onPress = ::onMicPressed,
             onRelease = viewModel::stopRecording,
             modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
         )
+    }
+}
+
+@Composable
+private fun SettingsMenu(speechDisabled: Boolean, onSpeechDisabledChange: (Boolean) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.button_settings))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.setting_disable_tts)) },
+                trailingIcon = { Checkbox(checked = speechDisabled, onCheckedChange = null) },
+                onClick = { onSpeechDisabledChange(!speechDisabled) },
+            )
+        }
     }
 }
 

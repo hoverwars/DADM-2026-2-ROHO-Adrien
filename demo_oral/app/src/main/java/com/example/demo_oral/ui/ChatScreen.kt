@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Error
@@ -75,6 +76,7 @@ import com.example.demo_oral.viewmodel.Role
 
 @Composable
 fun ChatScreen(
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatViewModel = viewModel(),
 ) {
@@ -114,6 +116,9 @@ fun ChatScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.button_back))
+            }
             Text(
                 text = stringResource(R.string.title),
                 style = MaterialTheme.typography.headlineSmall,
@@ -122,6 +127,8 @@ fun ChatScreen(
             SettingsMenu(
                 speechDisabled = !state.speechEnabled,
                 onSpeechDisabledChange = { viewModel.setSpeechEnabled(!it) },
+                keyboardHidden = state.keyboardHidden,
+                onKeyboardHiddenChange = viewModel::setKeyboardHidden,
             )
             IconButton(
                 onClick = viewModel::resetConversation,
@@ -149,10 +156,12 @@ fun ChatScreen(
         StatusLine(state = state, permissionDenied = permissionDenied)
 
         // DEBUG: typed input, remove this call and DebugTextInput.kt
-        DebugTextInput(
-            enabled = state.modelsReady && !state.assistantBusy && !state.isRecording && !state.isFinishing,
-            onSend = viewModel::debugSendText,
-        )
+        if (!state.keyboardHidden) {
+            DebugTextInput(
+                enabled = state.modelsReady && !state.assistantBusy && !state.isRecording && !state.isFinishing,
+                onSend = viewModel::debugSendText,
+            )
+        }
 
         MicButton(
             isRecording = state.isRecording,
@@ -165,7 +174,12 @@ fun ChatScreen(
 }
 
 @Composable
-private fun SettingsMenu(speechDisabled: Boolean, onSpeechDisabledChange: (Boolean) -> Unit) {
+private fun SettingsMenu(
+    speechDisabled: Boolean,
+    onSpeechDisabledChange: (Boolean) -> Unit,
+    keyboardHidden: Boolean,
+    onKeyboardHiddenChange: (Boolean) -> Unit,
+) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
@@ -176,6 +190,11 @@ private fun SettingsMenu(speechDisabled: Boolean, onSpeechDisabledChange: (Boole
                 text = { Text(stringResource(R.string.setting_disable_tts)) },
                 trailingIcon = { Checkbox(checked = speechDisabled, onCheckedChange = null) },
                 onClick = { onSpeechDisabledChange(!speechDisabled) },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.setting_hide_keyboard)) },
+                trailingIcon = { Checkbox(checked = keyboardHidden, onCheckedChange = null) },
+                onClick = { onKeyboardHiddenChange(!keyboardHidden) },
             )
         }
     }

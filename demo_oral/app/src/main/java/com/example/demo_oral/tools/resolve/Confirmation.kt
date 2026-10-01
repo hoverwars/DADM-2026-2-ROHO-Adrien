@@ -27,8 +27,8 @@ object Confirmation {
         return words.any { it in CANCEL_WORDS } || CANCEL_PHRASES.any { normalized.contains(it) }
     }
 
-    private val CANCEL_WORDS = setOf("cancel", "cancela", "cancelar", "cancelalo", "annule", "stop", "olvidalo")
-    private val CANCEL_PHRASES = listOf("never mind", "nevermind", "forget it", "forget about it")
+    private val CANCEL_WORDS = setOf("cancel", "cancela", "cancelar", "cancelalo", "annule", "stop", "olvidalo", "olvida", "dejalo")
+    private val CANCEL_PHRASES = listOf("never mind", "nevermind", "forget it", "forget about it", "no importa", "da igual", "olvidate", "ya no")
 
     private val YES_WORDS = setOf(
         "si", "vale", "ok", "okay", "claro", "adelante", "confirmo", "dale", "perfecto", "yes", "yeah",

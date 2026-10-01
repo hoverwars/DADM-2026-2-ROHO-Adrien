@@ -34,7 +34,7 @@ class CreateCalendarEventTool(private val context: Context) : Tool {
             ToolParam("time", ParamType.STRING, "Start time, as said by the user, e.g. \"15:30\"", required = false),
             ToolParam("duration_minutes", ParamType.INTEGER, "Length of the event in minutes", required = false),
         ),
-        keywords = listOf("calendar", "agenda", "evento", "event", "cita", "reunion", "rendez", "meeting", "appointment"),
+        keywords = listOf("calendar", "agenda", "evento", "event", "cita", "reunion", "rendez", "meeting", "appointment", "recuerd", "recordatorio"),
         permissions = listOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
     )
 
@@ -103,7 +103,7 @@ class CreateCalendarEventTool(private val context: Context) : Tool {
 
     private companion object {
         const val DEFAULT_MINUTES = 60
-        val DAY_FORMAT: DateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.US)
+        val DAY_FORMAT: DateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale("es", "ES"))
         val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }

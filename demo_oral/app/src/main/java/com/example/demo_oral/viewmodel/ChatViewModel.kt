@@ -67,6 +67,7 @@ data class ChatUiState(
     val isSpeaking: Boolean = false,
     /** Setting: the answers are read aloud */
     val speechEnabled: Boolean = true,
+    val keyboardHidden: Boolean = false,
     /** Android permissions a tool is waiting for: the screen must ask for them */
     val pendingPermissions: List<String> = emptyList(),
     val messages: List<ChatMessage> = emptyList(),
@@ -96,7 +97,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val _uiState = MutableStateFlow(
-        ChatUiState(speechEnabled = prefs.getBoolean(KEY_SPEECH_ENABLED, true))
+        ChatUiState(
+            speechEnabled = prefs.getBoolean(KEY_SPEECH_ENABLED, true),
+            keyboardHidden = prefs.getBoolean(KEY_KEYBOARD_HIDDEN, false),
+        )
     )
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
@@ -182,6 +186,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(speechEnabled = enabled) }
         prefs.edit().putBoolean(KEY_SPEECH_ENABLED, enabled).apply()
         if (!enabled) speaker.stop()
+    }
+
+    /** Setting: hide the typed input, to only talk. */
+    fun setKeyboardHidden(hidden: Boolean) {
+        _uiState.update { it.copy(keyboardHidden = hidden) }
+        prefs.edit().putBoolean(KEY_KEYBOARD_HIDDEN, hidden).apply()
     }
 
     /** Forgets the whole conversation. */
@@ -694,6 +704,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         private const val TAG = "ChatViewModel"
         private const val PREFS_NAME = "settings"
         private const val KEY_SPEECH_ENABLED = "speech_enabled"
+        private const val KEY_KEYBOARD_HIDDEN = "keyboard_hidden"
 
         // A confirmation or a question nobody answers is cancelled after this long
         private const val PENDING_TIMEOUT_MS = 60_000L

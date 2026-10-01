@@ -18,7 +18,7 @@ import com.example.demo_oral.tools.ToolParam
 import com.example.demo_oral.tools.ToolResult
 import com.example.demo_oral.tools.ToolSpec
 
-private val FLASHLIGHT_KEYWORDS = listOf("linterna", "flash", "torch", "flashlight", "lampe", "lanterna")
+private val FLASHLIGHT_KEYWORDS = listOf("linterna", "flash", "torch", "flashlight", "lampe", "lanterna", "luz")
 
 /** Turns the flashlight on or off (no permission needed). */
 class FlashlightTool(private val context: Context, private val turnOn: Boolean) : Tool {

@@ -1,9 +1,14 @@
 <resources>
-    <string name="app_name">Demo Oral</string>
+    <string name="app_name">Demo Speech Recognition</string>
+
+    <string name="menu_subtitle">Asistente de voz en el dispositivo</string>
+    <string name="menu_chat">Conversación</string>
+    <string name="menu_quit">Salir</string>
+    <string name="button_back">Volver</string>
 
     <string name="title">Conversación por voz</string>
     <string name="chat_placeholder">Mantén pulsado el micrófono y habla…</string>
-    <string name="chat_error">Sorry, I could not answer.</string>
+    <string name="chat_error">Lo siento, no he podido responder.</string>
 
     <string name="loading_title">Preparando los modelos…</string>
     <string name="loading_subtitle">Solo tarda unos segundos al abrir la app</string>
@@ -21,60 +26,61 @@
     <string name="button_talk">Mantén pulsado para hablar</string>
     <string name="button_reset">Nueva conversación</string>
     <string name="button_settings">Ajustes</string>
+    <string name="setting_hide_keyboard">Ocultar el teclado</string>
     <string name="setting_disable_tts">Desactivar la voz de las respuestas</string>
     <string name="debug_text_hint">Debug: escribe un mensaje</string>
     <string name="debug_text_send">Enviar</string>
 
     <!-- Tools: what the assistant says after acting -->
-    <string name="tool_error">Sorry, I could not do that.</string>
-    <string name="tool_cancelled">Okay, cancelled.</string>
-    <string name="tool_permission_denied">I can\'t do that without that permission.</string>
-    <string name="tool_permission_needed">I need your permission to do that.</string>
-    <string name="tool_time_unclear">I didn\'t understand the time.</string>
-    <string name="tool_date_unclear">I didn\'t understand the date.</string>
-    <string name="tool_title_unclear">I didn\'t understand the title.</string>
-    <string name="tool_message_unclear">I didn\'t understand the message.</string>
-    <string name="tool_duration_unclear">I didn\'t understand the duration.</string>
-    <string name="tool_volume_unclear">I didn\'t understand the volume.</string>
-    <string name="tool_alarm_set">Alarm set for %1$s.</string>
-    <string name="tool_alarm_failed">I could not set the alarm.</string>
-    <string name="tool_timer_set">Timer set for %1$s.</string>
-    <string name="tool_timer_failed">I could not set the timer.</string>
+    <string name="tool_error">Lo siento, no he podido hacerlo.</string>
+    <string name="tool_cancelled">Vale, cancelado.</string>
+    <string name="tool_permission_denied">No puedo hacerlo sin ese permiso.</string>
+    <string name="tool_permission_needed">Necesito tu permiso para hacerlo.</string>
+    <string name="tool_time_unclear">No he entendido la hora.</string>
+    <string name="tool_date_unclear">No he entendido la fecha.</string>
+    <string name="tool_title_unclear">No he entendido el título.</string>
+    <string name="tool_message_unclear">No he entendido el mensaje.</string>
+    <string name="tool_duration_unclear">No he entendido la duración.</string>
+    <string name="tool_volume_unclear">No he entendido el volumen.</string>
+    <string name="tool_alarm_set">Alarma puesta a las %1$s.</string>
+    <string name="tool_alarm_failed">No he podido poner la alarma.</string>
+    <string name="tool_timer_set">Temporizador de %1$s en marcha.</string>
+    <string name="tool_timer_failed">No he podido poner el temporizador.</string>
     <plurals name="tool_duration_minutes">
-        <item quantity="one">%1$d minute</item>
-        <item quantity="other">%1$d minutes</item>
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="other">%1$d minutos</item>
     </plurals>
     <plurals name="tool_duration_seconds">
-        <item quantity="one">%1$d second</item>
-        <item quantity="other">%1$d seconds</item>
+        <item quantity="one">%1$d segundo</item>
+        <item quantity="other">%1$d segundos</item>
     </plurals>
-    <string name="tool_duration_both">%1$s and %2$s</string>
-    <string name="tool_flashlight_on">Flashlight on.</string>
-    <string name="tool_flashlight_off">Flashlight off.</string>
-    <string name="tool_flashlight_missing">This phone has no flashlight.</string>
-    <string name="tool_flashlight_busy">I can\'t use the flashlight right now.</string>
-    <string name="tool_battery">The battery is at %1$d percent.</string>
-    <string name="tool_battery_charging">The battery is at %1$d percent and charging.</string>
-    <string name="tool_volume_set">Volume set to %1$d percent.</string>
-    <string name="tool_calendar_created">Event %1$s created on %2$s at %3$s.</string>
-    <string name="tool_calendar_missing">I can\'t find a calendar to save the event in.</string>
-    <string name="tool_calendar_failed">I could not create the event.</string>
-    <string name="tool_contact_not_found">I can\'t find %1$s in your contacts.</string>
-    <string name="tool_sms_confirm">Shall I send %1$s the message: %2$s?</string>
-    <string name="tool_sms_sent">Message sent to %1$s.</string>
-    <string name="tool_sms_failed">I could not send the message.</string>
-    <string name="tool_call_confirm">Shall I call %1$s?</string>
-    <string name="tool_call_started">Calling %1$s.</string>
-    <string name="tool_call_failed">I could not make the call.</string>
-    <string name="tool_info_gave_up">I still don\'t have what I need, so I cancelled it.</string>
-    <string name="ask_event_title">What should I call the event?</string>
-    <string name="ask_event_day">Which day?</string>
-    <string name="ask_alarm_time">What time should the alarm ring?</string>
-    <string name="ask_sms_contact">Who should I send it to?</string>
-    <string name="ask_sms_message">What should the message say?</string>
-    <string name="ask_call_contact">Who should I call?</string>
-    <string name="ask_volume_level">What volume level, in percent?</string>
-    <string name="tool_timeout">Time is up, I cancelled it.</string>
+    <string name="tool_duration_both">%1$s y %2$s</string>
+    <string name="tool_flashlight_on">Linterna encendida.</string>
+    <string name="tool_flashlight_off">Linterna apagada.</string>
+    <string name="tool_flashlight_missing">Este teléfono no tiene linterna.</string>
+    <string name="tool_flashlight_busy">Ahora mismo no puedo usar la linterna.</string>
+    <string name="tool_battery">La batería está al %1$d por ciento.</string>
+    <string name="tool_battery_charging">La batería está al %1$d por ciento y cargando.</string>
+    <string name="tool_volume_set">Volumen al %1$d por ciento.</string>
+    <string name="tool_calendar_created">Evento %1$s creado el %2$s a las %3$s.</string>
+    <string name="tool_calendar_missing">No encuentro ningún calendario donde guardar el evento.</string>
+    <string name="tool_calendar_failed">No he podido crear el evento.</string>
+    <string name="tool_contact_not_found">No encuentro a %1$s en tus contactos.</string>
+    <string name="tool_sms_confirm">¿Envío a %1$s el mensaje: %2$s?</string>
+    <string name="tool_sms_sent">Mensaje enviado a %1$s.</string>
+    <string name="tool_sms_failed">No he podido enviar el mensaje.</string>
+    <string name="tool_call_confirm">¿Llamo a %1$s?</string>
+    <string name="tool_call_started">Llamando a %1$s.</string>
+    <string name="tool_call_failed">No he podido hacer la llamada.</string>
+    <string name="tool_info_gave_up">Sigo sin tener lo que necesito, así que lo he cancelado.</string>
+    <string name="ask_event_title">¿Cómo se llama el evento?</string>
+    <string name="ask_event_day">¿Qué día?</string>
+    <string name="ask_alarm_time">¿A qué hora suena la alarma?</string>
+    <string name="ask_sms_contact">¿A quién se lo envío?</string>
+    <string name="ask_sms_message">¿Qué dice el mensaje?</string>
+    <string name="ask_call_contact">¿A quién llamo?</string>
+    <string name="ask_volume_level">¿Qué volumen, en porcentaje?</string>
+    <string name="tool_timeout">Se acabó el tiempo, lo he cancelado.</string>
 
     <!-- Tools: cards shown in the conversation -->
     <string name="card_alarm">Alarma</string>

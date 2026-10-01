@@ -49,6 +49,14 @@ class ConfirmationTest {
         assertEquals(Confirmation.Answer.UNKNOWN, Confirmation.parse("qué tiempo hace"))
         assertEquals(Confirmation.Answer.UNKNOWN, Confirmation.parse("sí no sé"))
     }
+
+    @Test
+    fun understandsCancellations() {
+        assertTrue(Confirmation.isCancel("Olvídalo"))
+        assertTrue(Confirmation.isCancel("da igual"))
+        assertTrue(Confirmation.isCancel("déjalo, ya no hace falta"))
+        assertTrue(!Confirmation.isCancel("no, el viernes"))
+    }
 }
 
 private class FakeTool(
@@ -91,8 +99,8 @@ class ToolRegistryTest {
     fun validatesCallsAgainstTheDeclaredParameters() {
         assertTrue(registry.validate("set_alarm", mapOf("time" to "7:30")) is ToolRegistry.Validation.Valid)
         assertTrue(registry.validate("set_alarm", mapOf("time" to "7:30", "snooze" to 5.0)) is ToolRegistry.Validation.Valid)
-        assertTrue(registry.validate("set_alarm", emptyMap()) is ToolRegistry.Validation.Invalid)
-        assertTrue(registry.validate("set_alarm", mapOf("time" to "  ")) is ToolRegistry.Validation.Invalid)
+        assertTrue(registry.validate("set_alarm", emptyMap()) is ToolRegistry.Validation.Missing)
+        assertTrue(registry.validate("set_alarm", mapOf("time" to "  ")) is ToolRegistry.Validation.Missing)
         assertTrue(registry.validate("launch_rocket", emptyMap()) is ToolRegistry.Validation.Invalid)
     }
 }
@@ -181,5 +189,19 @@ class ToolAgentTest {
         val outcome = agent.handle("llama a mamá") as AgentOutcome.Confirm
         assertEquals("really?", outcome.question)
         assertEquals("call_contact", outcome.card.title)
+    }
+
+    @Test
+    fun aQuestionIsNotTakenAsTheMissingValue() = runBlocking {
+        val title = ToolParam("title", ParamType.STRING, "title", ask = "¿Cómo se llama el evento?")
+        val tool = FakeTool("create_calendar_event", listOf("evento"), params = listOf(title))
+        val agent = agent(tool) { null }
+        val action = PendingAction(tool, ToolArgs(emptyMap()))
+        val request = "crea un evento"
+        assertEquals(FillResult.NoProgress, agent.fill(action, listOf(title), request, "¿Qué tiempo hace mañana?"))
+        assertEquals(FillResult.NoProgress, agent.fill(action, listOf(title), request, "cuánto es dos más dos"))
+        val filled = agent.fill(action, listOf(title), request, "Dentista") as FillResult.Progress
+        assertTrue(filled.outcome is AgentOutcome.Done)
+        assertEquals("Dentista", tool.executed?.string("title"))
     }
 }

@@ -35,7 +35,7 @@ class LiveTranscriber(assets: AssetManager) : AutoCloseable {
                 whisper = OfflineWhisperModelConfig(
                     encoder = "models/small-encoder.int8.onnx",
                     decoder = "models/small-decoder.int8.onnx",
-                    language = "en",
+                    language = "es",
                     task = "transcribe",
                 ),
                 tokens = "models/small-tokens.txt",

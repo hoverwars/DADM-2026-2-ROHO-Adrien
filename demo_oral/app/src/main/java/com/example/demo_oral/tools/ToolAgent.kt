@@ -171,6 +171,8 @@ class ToolAgent(
         val QUESTION_WORDS = setOf(
             "what", "who", "why", "how", "when", "where", "which", "can", "could", "would", "do", "does",
             "is", "are",
+            "que", "quien", "como", "cuando", "donde", "cual", "cuanto", "cuantos", "por", "puedes",
+            "podrias", "sabes",
         )
     }
 }

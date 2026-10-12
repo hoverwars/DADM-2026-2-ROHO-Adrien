@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "85140797334",
+    "project_id": "reto-7-aroho",
+    "storage_bucket": "reto-7-aroho.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:85140797334:android:4fed3434394214d24dcfb7",
+        "android_client_info": {
+          "package_name": "com.example.reto_7_roho_a"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCg3ZsVbQOrup0iOp7N7a5S55r21EndHGc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

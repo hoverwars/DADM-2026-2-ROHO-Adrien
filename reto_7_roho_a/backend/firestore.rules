@@ -1,0 +1,78 @@
+rules_version = '2';
+
+// Backend de Triqui Online : une partie = un document dans /games/{gameId}.
+// Les règles garantissent que chaque écriture correspond à une transition valide :
+//   crear -> unirse -> jugar -> (revancha) -> abandonar
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /games/{gameId} {
+
+      function validBoard(b) {
+        return b is string && b.size() == 9;
+      }
+
+      function changed(keys) {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+      }
+
+      allow read: if true;
+
+      // Crear una partida: siempre en espera, tablero vacío, sin invitado.
+      allow create: if request.resource.data.keys().hasOnly([
+            'hostId', 'hostName', 'guestId', 'guestName', 'status', 'board',
+            'turn', 'winner', 'scoreX', 'scoreO', 'round', 'createdAt', 'updatedAt'])
+        && request.resource.data.hostId is string
+        && request.resource.data.hostName is string
+        && request.resource.data.hostName.size() > 0
+        && request.resource.data.hostName.size() <= 20
+        && request.resource.data.guestId == null
+        && request.resource.data.status == 'waiting'
+        && request.resource.data.board == '---------'
+        && request.resource.data.turn == 'X'
+        && request.resource.data.winner == ''
+        && request.resource.data.scoreX == 0
+        && request.resource.data.scoreO == 0
+        && request.resource.data.round == 0;
+
+      allow update: if
+        // Unirse a una partida en espera (solo un invitado, distinto del anfitrión)
+        (resource.data.status == 'waiting'
+          && resource.data.guestId == null
+          && request.resource.data.status == 'playing'
+          && request.resource.data.guestId is string
+          && request.resource.data.guestId != resource.data.hostId
+          && request.resource.data.guestName is string
+          && request.resource.data.guestName.size() > 0
+          && request.resource.data.guestName.size() <= 20
+          && changed(['guestId', 'guestName', 'status', 'updatedAt']))
+        // Señal de vida del anfitrión mientras espera rival
+        || (resource.data.status == 'waiting'
+          && request.resource.data.status == 'waiting'
+          && changed(['updatedAt']))
+        // Jugar: solo con partida en curso, cambia el turno salvo si termina
+        || (resource.data.status == 'playing'
+          && request.resource.data.status in ['playing', 'finished']
+          && validBoard(request.resource.data.board)
+          && request.resource.data.turn in ['X', 'O']
+          && (request.resource.data.status == 'finished'
+              || request.resource.data.turn != resource.data.turn)
+          && request.resource.data.winner in ['', 'X', 'O', 'D']
+          && changed(['board', 'turn', 'status', 'winner', 'scoreX', 'scoreO', 'updatedAt']))
+        // Nueva partida (revancha) una vez terminada la anterior
+        || (resource.data.status == 'finished'
+          && request.resource.data.status == 'playing'
+          && request.resource.data.board == '---------'
+          && request.resource.data.winner == ''
+          && request.resource.data.turn in ['X', 'O']
+          && request.resource.data.round == resource.data.round + 1
+          && changed(['board', 'turn', 'status', 'winner', 'round', 'updatedAt']))
+        // Abandonar
+        || (resource.data.status in ['playing', 'finished']
+          && request.resource.data.status == 'abandoned'
+          && changed(['status', 'updatedAt']));
+
+      // El anfitrión borra su partida si nadie se unió (o si ya terminó)
+      allow delete: if resource.data.status in ['waiting', 'abandoned'];
+    }
+  }
+}

@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Directorio TI</string>
+    <string name="title_company_list">Empresas</string>
+    <string name="title_company_detail">Detalle de la empresa</string>
+    <string name="title_company_form">Empresa</string>
+</resources>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.RETO_8_ROHO_A">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".ui.CompanyListActivity"
+            android:exported="false"
+            android:label="@string/title_company_list"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ui.CompanyDetailActivity"
+            android:exported="false"
+            android:label="@string/title_company_detail" />
+        <activity
+            android:name=".ui.CompanyFormActivity"
+            android:exported="false"
+            android:label="@string/title_company_form"
+            android:windowSoftInputMode="adjustResize" />
+    </application>
+
+</manifest>

@@ -10,6 +10,8 @@ import java.net.URLEncoder
 /** Cliente mínimo de la API Overpass de OpenStreetMap (HttpURLConnection + org.json). */
 object OverpassClient {
     private val ENDPOINTS = listOf(
+        "https://overpass.openstreetmap.fr/api/interpreter",
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
         "https://overpass-api.de/api/interpreter",
         "https://overpass.kumi.systems/api/interpreter",
         "https://overpass.private.coffee/api/interpreter"
@@ -41,8 +43,8 @@ object OverpassClient {
         val connection = URL(endpoint).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "POST"
-            connection.connectTimeout = 10_000
-            connection.readTimeout = 20_000
+            connection.connectTimeout = 6_000
+            connection.readTimeout = 15_000
             connection.doOutput = true
             connection.setRequestProperty("User-Agent", HTTP_USER_AGENT)
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")

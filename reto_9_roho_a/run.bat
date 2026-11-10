@@ -1,5 +1,5 @@
 :: 1. Compiler et installer l APK debug sur le telephone branche
-call gradlew.bat :app:installDebug
+call .\gradlew.bat :app:installDebug
 
 :: 2. (Re)lancer l app - force-stop d abord pour charger le nouveau build
 adb shell am force-stop com.example.reto_9_roho_a

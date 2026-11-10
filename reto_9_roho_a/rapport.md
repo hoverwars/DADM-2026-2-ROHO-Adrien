@@ -59,7 +59,7 @@ Découpage identique aux retos précédents : **Activity (Compose) → ViewModel
   `OnlineTileSourceBase` avec `getTileURLString` redéfini. L'attribution est affichée par `CopyrightOverlay`.
 - **Overpass :** requête `nwr(around:<mètres>,lat,lon)[filtre]` par catégorie, avec `out center tags` pour obtenir
   un point pour les bâtiments et zones (way/relation). Les éléments sans `name` sont ignorés.
-  Trois serveurs sont essayés dans l'ordre (20 s de lecture chacun). Résultat limité à 40 POI **par catégorie**
+  Cinq serveurs sont essayés dans l ordre (overpass.openstreetmap.fr en premier ; 15 s de lecture chacun). Résultat limité à 40 POI **par catégorie**
   (et non 150 au total, qui concentrait tout autour de l'utilisateur), trié par distance.
 - **Préférences :** le rayon (1–50 km, 5 par défaut) et les catégories sont lus à chaque `onResume`.
   S'ils ont changé et qu'un centre existe, la recherche est relancée automatiquement.
